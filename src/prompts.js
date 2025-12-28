@@ -52,6 +52,7 @@ export async function getProjectConfig(initialName, useDefaults = false) {
         { name: 'Axios - HTTP 请求', value: 'axios' },
         { name: 'i18next - 国际化', value: 'i18n' },
         { name: 'Toast - 消息提示', value: 'toast' },
+        { name: 'Form - 表单验证 (react-hook-form + zod)', value: 'form' },
         { name: 'Husky + Prettier - 代码规范', value: 'lint', checked: true },
       ],
     },

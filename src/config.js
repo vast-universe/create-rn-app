@@ -7,6 +7,7 @@ export const LIBRARIES = {
   axios: ['axios'],
   i18n: ['i18next', 'react-i18next'],
   toast: ['react-native-toast-message'],
+  form: ['react-hook-form', 'zod', '@hookform/resolvers'],
   ui_rneui: ['@rneui/themed', '@rneui/base'],
   ui_tamagui: ['tamagui', '@tamagui/config'],
   ui_nativewind: [],
@@ -15,9 +16,10 @@ export const LIBRARIES = {
 // feature 模块映射
 export const FEATURES = {
   redux: { name: 'feature-redux', dest: 'store' },
-  axios: { name: 'feature-axios', dest: 'api' },
-  i18n: { name: 'feature-i18n', dest: 'i18n' },
-  toast: { name: 'feature-toast', dest: 'utils/toast' },
+  axios: { name: 'feature-axios', dest: 'services' },
+  i18n: { name: 'feature-i18n', dest: 'lib/i18n' },
+  toast: { name: 'feature-toast', dest: 'lib/toast' },
+  form: { name: 'feature-form', dest: 'lib/form' },
   ui_nativewind: { name: 'feature-nativewind', dest: '.' },
 };
 

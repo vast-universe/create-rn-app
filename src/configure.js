@@ -23,12 +23,12 @@ export async function configureEntryFile(targetDir, stateLib, extraLibs, uiLib) 
 
   // i18n
   if (extraLibs.includes('i18n')) {
-    imports.push(`import '@/i18n';`);
+    imports.push(`import '@/lib/i18n';`);
   }
 
   // Toast
   if (extraLibs.includes('toast')) {
-    imports.push(`import { Toast } from '@/utils/toast';`);
+    imports.push(`import { Toast } from '@/lib/toast';`);
   }
 
   // NativeWind - 导入 global.css
@@ -45,8 +45,21 @@ export async function configureEntryFile(targetDir, stateLib, extraLibs, uiLib) 
     }
   }
 
-  // Redux: 包裹 Provider
-  if (stateLib === 'redux') {
+  // Redux + Toast: 一起处理，生成正确的嵌套结构
+  if (stateLib === 'redux' && extraLibs.includes('toast')) {
+    content = content.replace(
+      /return\s*(<[^;]+);/,
+      `return (
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        $1
+        <Toast />
+      </PersistGate>
+    </Provider>
+  );`
+    );
+  } else if (stateLib === 'redux') {
+    // 只有 Redux，没有 Toast
     content = content.replace(
       /return\s*(<[^;]+);/,
       `return (
@@ -57,31 +70,17 @@ export async function configureEntryFile(targetDir, stateLib, extraLibs, uiLib) 
     </Provider>
   );`
     );
-  }
-
-  // Toast: 在最外层添加 Toast
-  if (extraLibs.includes('toast')) {
+  } else if (extraLibs.includes('toast')) {
+    // 只有 Toast，没有 Redux
     content = content.replace(
-      /(<\/Provider>|<\/PersistGate>|<Stack\s*\/>)(\s*\);?\s*$)/m,
-      (_, tag, ending) => {
-        if (tag === '<Stack />') {
-          return `<>\n        <Stack />\n        <Toast />\n      </>${ending}`;
-        }
-        return `${tag}\n      <Toast />${ending}`;
-      }
-    );
-    // 如果没有 Redux，直接包裹
-    if (stateLib === 'none') {
-      content = content.replace(
-        /return\s*(<Stack\s*\/>);/,
-        `return (
+      /return\s*(<Stack\s*\/>);/,
+      `return (
     <>
       <Stack />
       <Toast />
     </>
   );`
-      );
-    }
+    );
   }
 
   await fs.writeFile(layoutPath, content);

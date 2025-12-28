@@ -11,6 +11,7 @@
 - 🎨 NativeWind v5 (Tailwind CSS)
 - 🔧 cn + cva 组件变体
 - 📢 Toast 消息提示
+- 📝 表单验证 (react-hook-form + zod)
 - 🔒 Husky + Prettier 代码规范
 - ⚡ 环境变量支持
 
@@ -33,6 +34,7 @@ npx create-rn-app my-app --yes
   ◉ Axios - HTTP 请求
   ◉ i18next - 国际化
   ◉ Toast - 消息提示
+  ◉ Form - 表单验证
   ◉ Husky + Prettier - 代码规范
 ? UI 库: NativeWind (Tailwind)
 ```
@@ -43,10 +45,12 @@ npx create-rn-app my-app --yes
 my-app/
 ├── app/                # expo-router 页面
 ├── store/              # Redux 状态管理
-├── api/                # Axios HTTP 服务
-├── i18n/               # 国际化
+├── services/           # API 服务层
+├── lib/                # 第三方库封装
+│   ├── i18n/           # 国际化
+│   ├── form/           # 表单验证
+│   └── toast/          # 消息提示
 ├── components/         # UI 组件
-├── utils/              # 工具函数
 ├── .env                # 环境变量
 └── ...
 ```
