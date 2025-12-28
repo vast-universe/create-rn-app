@@ -7,7 +7,8 @@
     "create-rn-app": "./index.js"
   },
   "files": [
-    "index.js"
+    "index.js",
+    "src/"
   ],
   "keywords": [
     "react-native",
