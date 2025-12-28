@@ -21,6 +21,7 @@ const LIBRARIES = {
   redux: ['@reduxjs/toolkit', 'react-redux', 'redux-persist', '@react-native-async-storage/async-storage'],
   axios: ['axios'],
   i18n: ['i18next', 'react-i18next'],
+  toast: ['react-native-toast-message'],
   ui_rneui: ['@rneui/themed', '@rneui/base'],
   ui_tamagui: ['tamagui', '@tamagui/config'],
   ui_nativewind: [], // 使用 npx expo install 安装
@@ -31,6 +32,7 @@ const FEATURES = {
   redux: { name: 'feature-redux', dest: 'store' },
   axios: { name: 'feature-axios', dest: 'api' },
   i18n: { name: 'feature-i18n', dest: 'i18n' },
+  toast: { name: 'feature-toast', dest: 'utils/toast' },
   ui_nativewind: { name: 'feature-nativewind', dest: '.' },
 };
 
@@ -41,9 +43,10 @@ async function main() {
     .name('create-rn-app')
     .description('基于 create-expo-app 创建项目并扩展三方库')
     .argument('[project-name]', '项目名称')
-    .action(async (projectName) => {
+    .option('-y, --yes', '使用默认配置，跳过交互')
+    .action(async (projectName, options) => {
       try {
-        await createProject(projectName);
+        await createProject(projectName, options.yes);
       } catch (error) {
         console.error(chalk.red('❌ 失败:'), error.message);
         process.exit(1);
@@ -53,61 +56,86 @@ async function main() {
   program.parse();
 }
 
-async function createProject(initialName) {
-  // 1. 获取项目名
-  const { projectName } = initialName
-    ? { projectName: initialName }
-    : await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'projectName',
-          message: '项目名称:',
-          default: 'my-app',
-        },
-      ]);
+async function createProject(initialName, useDefaults = false) {
+  // 默认配置
+  const defaults = {
+    projectName: initialName || 'my-app',
+    stateLib: 'redux',
+    extraLibs: ['axios', 'lint'],
+    uiLib: 'ui_nativewind',
+  };
 
-  // 2. 选择状态管理
-  const { stateLib } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'stateLib',
-      message: '状态管理:',
-      default: 'redux',
-      choices: [
-        { name: 'Redux Toolkit (推荐)', value: 'redux' },
-        { name: '不需要', value: 'none' },
-      ],
-    },
-  ]);
+  let projectName, stateLib, extraLibs, uiLib;
 
-  // 3. 选择其他库
-  const { extraLibs } = await inquirer.prompt([
-    {
-      type: 'checkbox',
-      name: 'extraLibs',
-      message: '选择其他库 (空格选择):',
-      choices: [
-        { name: 'Axios - HTTP 请求', value: 'axios' },
-        { name: 'i18next - 国际化', value: 'i18n' },
-      ],
-    },
-  ]);
+  if (useDefaults) {
+    // 使用默认配置
+    projectName = defaults.projectName;
+    stateLib = defaults.stateLib;
+    extraLibs = defaults.extraLibs;
+    uiLib = defaults.uiLib;
+    console.log(chalk.gray('使用默认配置...'));
+  } else {
+    // 1. 获取项目名
+    const nameAnswer = initialName
+      ? { projectName: initialName }
+      : await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'projectName',
+            message: '项目名称:',
+            default: 'my-app',
+          },
+        ]);
+    projectName = nameAnswer.projectName;
 
-  // 4. 选择 UI 库
-  const { uiLib } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'uiLib',
-      message: 'UI 库:',
-      default: 'ui_nativewind',
-      choices: [
-        { name: 'NativeWind (Tailwind) (推荐)', value: 'ui_nativewind' },
-        { name: 'React Native Elements', value: 'ui_rneui' },
-        { name: 'Tamagui', value: 'ui_tamagui' },
-        { name: '不需要', value: 'none' },
-      ],
-    },
-  ]);
+    // 2. 选择状态管理
+    const stateAnswer = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'stateLib',
+        message: '状态管理:',
+        default: 'redux',
+        choices: [
+          { name: 'Redux Toolkit (推荐)', value: 'redux' },
+          { name: '不需要', value: 'none' },
+        ],
+      },
+    ]);
+    stateLib = stateAnswer.stateLib;
+
+    // 3. 选择其他库
+    const extraAnswer = await inquirer.prompt([
+      {
+        type: 'checkbox',
+        name: 'extraLibs',
+        message: '选择其他库 (空格选择):',
+        choices: [
+          { name: 'Axios - HTTP 请求', value: 'axios' },
+          { name: 'i18next - 国际化', value: 'i18n' },
+          { name: 'Toast - 消息提示', value: 'toast' },
+          { name: 'Husky + Prettier - 代码规范', value: 'lint', checked: true },
+        ],
+      },
+    ]);
+    extraLibs = extraAnswer.extraLibs;
+
+    // 4. 选择 UI 库
+    const uiAnswer = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'uiLib',
+        message: 'UI 库:',
+        default: 'ui_nativewind',
+        choices: [
+          { name: 'NativeWind (Tailwind) (推荐)', value: 'ui_nativewind' },
+          { name: 'React Native Elements', value: 'ui_rneui' },
+          { name: 'Tamagui', value: 'ui_tamagui' },
+          { name: '不需要', value: 'none' },
+        ],
+      },
+    ]);
+    uiLib = uiAnswer.uiLib;
+  }
 
   const targetDir = path.resolve(process.cwd(), projectName);
 
@@ -143,11 +171,13 @@ async function createProject(initialName) {
   }
 
   extraLibs.forEach((lib) => {
-    LIBRARIES[lib].forEach((dep) => {
-      if (!depsToInstall.includes(dep)) {
-        depsToInstall.push(dep);
-      }
-    });
+    if (LIBRARIES[lib]) {
+      LIBRARIES[lib].forEach((dep) => {
+        if (!depsToInstall.includes(dep)) {
+          depsToInstall.push(dep);
+        }
+      });
+    }
     if (FEATURES[lib]) featuresToCopy.push(FEATURES[lib]);
   });
 
@@ -190,6 +220,11 @@ async function createProject(initialName) {
         cwd: targetDir,
         stdio: 'pipe',
       });
+      // 安装 cn + cva 工具链
+      execSync('npm install clsx tailwind-merge class-variance-authority', {
+        cwd: targetDir,
+        stdio: 'pipe',
+      });
       spinner.succeed('NativeWind 安装完成');
     } catch (error) {
       spinner.fail('NativeWind 安装失败，请手动安装');
@@ -203,6 +238,51 @@ async function createProject(initialName) {
       await copyFeature(feature.name, targetDir, feature.dest);
     }
     spinner.succeed('配置注入完成');
+  }
+
+  // 9.1 如果选了 axios，复制 .env 文件
+  if (extraLibs.includes('axios')) {
+    const localEnvPath = path.join(__dirname, '../expo-template-rn/features/feature-env/.env.example');
+    if (await fs.pathExists(localEnvPath)) {
+      await fs.copy(localEnvPath, path.join(targetDir, '.env'));
+    }
+  }
+
+  // 9.2 如果选了 lint，配置 Husky + Prettier
+  if (extraLibs.includes('lint')) {
+    spinner.start('正在配置代码规范...');
+    try {
+      // 安装依赖
+      execSync('npm install -D prettier husky lint-staged', { cwd: targetDir, stdio: 'pipe' });
+
+      // 复制配置文件
+      const lintPath = path.join(__dirname, '../expo-template-rn/features/feature-lint');
+      if (await fs.pathExists(lintPath)) {
+        await fs.copy(path.join(lintPath, '.prettierrc'), path.join(targetDir, '.prettierrc'));
+        await fs.copy(path.join(lintPath, '.prettierignore'), path.join(targetDir, '.prettierignore'));
+        await fs.copy(path.join(lintPath, '.lintstagedrc.js'), path.join(targetDir, '.lintstagedrc.js'));
+      }
+
+      // 初始化 husky
+      execSync('npx husky init', { cwd: targetDir, stdio: 'pipe' });
+
+      // 创建 pre-commit hook
+      const preCommitPath = path.join(targetDir, '.husky/pre-commit');
+      await fs.writeFile(preCommitPath, 'npx lint-staged\n');
+
+      // 添加 format script 到 package.json
+      const pkgPath = path.join(targetDir, 'package.json');
+      const pkg = await fs.readJson(pkgPath);
+      pkg.scripts = {
+        ...pkg.scripts,
+        format: 'prettier --write "**/*.{js,jsx,ts,tsx,json,md}"',
+      };
+      await fs.writeJson(pkgPath, pkg, { spaces: 2 });
+
+      spinner.succeed('代码规范配置完成');
+    } catch (error) {
+      spinner.fail('代码规范配置失败，请手动配置');
+    }
   }
 
   // 10. 配置入口文件
@@ -266,6 +346,11 @@ async function configureEntryFile(targetDir, stateLib, extraLibs, uiLib) {
     imports.push(`import '@/i18n';`);
   }
 
+  // Toast
+  if (extraLibs.includes('toast')) {
+    imports.push(`import { Toast } from '@/utils/toast';`);
+  }
+
   // NativeWind - 导入 global.css
   if (uiLib === 'ui_nativewind') {
     imports.push(`import '../global.css';`);
@@ -295,19 +380,57 @@ async function configureEntryFile(targetDir, stateLib, extraLibs, uiLib) {
     );
   }
 
+  // Toast: 在最外层添加 Toast
+  if (extraLibs.includes('toast')) {
+    // 在 return 的 JSX 最后添加 Toast
+    content = content.replace(
+      /(<\/Provider>|<\/PersistGate>|<Stack\s*\/>)(\s*\);?\s*$)/m,
+      (match, tag, ending) => {
+        if (tag === '<Stack />') {
+          return `<>\n        <Stack />\n        <Toast />\n      </>${ending}`;
+        }
+        return `${tag}\n      <Toast />${ending}`;
+      }
+    );
+    // 如果没有 Redux，直接包裹
+    if (stateLib === 'none') {
+      content = content.replace(
+        /return\s*(<Stack\s*\/>);/,
+        `return (
+    <>
+      <Stack />
+      <Toast />
+    </>
+  );`
+      );
+    }
+  }
+
   await fs.writeFile(layoutPath, content);
 
   // NativeWind - 替换 index.tsx 展示示例
   if (uiLib === 'ui_nativewind') {
     const indexPath = path.join(targetDir, 'app/index.tsx');
     const indexContent = `import { View, Text } from 'react-native';
+import { Button } from '@/components';
 
 export default function Index() {
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-xl font-bold text-blue-500">
+    <View className="flex-1 items-center justify-center gap-4 bg-white">
+      <Text className="text-xl font-bold text-gray-800">
         Welcome to NativeWind!
       </Text>
+      <View className="flex-row gap-2">
+        <Button variant="primary" onPress={() => console.log('Primary')}>
+          Primary
+        </Button>
+        <Button variant="outline" onPress={() => console.log('Outline')}>
+          Outline
+        </Button>
+      </View>
+      <Button variant="ghost" size="sm">
+        Ghost Button
+      </Button>
     </View>
   );
 }
